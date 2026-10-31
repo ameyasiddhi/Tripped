@@ -1,0 +1,781 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Tripped</title>
+<meta name="description" content="An anonymous wall where power plant engineers light up the problems they face every day. Tap 'me too' when you've seen it too.">
+<meta property="og:title" content="Tripped: the power plant problems engineers keep running into">
+<meta property="og:description" content="Light up a problem from your plant, anonymously. See who else has the same one.">
+<meta name="theme-color" content="#0b0f14">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0f14;--panel:#121a23;--panel2:#18222d;--line:#2a3542;--line2:#3a4756;
+  --text:#E3E1D9;--soft:#B4B2A9;--muted:#888780;--amber:#EF9F27;--amber-soft:#FAC775;
+  --amber-ink:#412402;--green:#97C459;--red:#E24B4A;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-tap-highlight-color:transparent}
+body{overflow:hidden;display:flex;flex-direction:column;height:100dvh}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+header{display:flex;align-items:center;gap:12px;padding:12px 16px calc(8px) 16px;padding-top:max(12px,env(safe-area-inset-top));font-family:var(--mono)}
+.brand{display:flex;flex-direction:column;line-height:1.2}
+.brand h1{font-size:20px;font-weight:500;color:var(--amber);letter-spacing:.02em;display:flex;align-items:center;gap:8px}
+.brand h1 .lamp{width:10px;height:10px;background:var(--amber);box-shadow:0 0 0 3px rgba(239,159,39,.18)}
+.brand p{font-size:11px;color:var(--muted)}
+.spacer{flex:1}
+.hbtn{font-family:var(--mono);font-size:12px;border:1px solid var(--line2);color:var(--soft);padding:7px 10px;border-radius:4px}
+.hbtn:hover{border-color:var(--soft)}
+.hbtn{white-space:nowrap}.hbtn .narrow{display:none}
+.post-btn{font-family:var(--mono);font-size:13px;background:var(--amber);color:var(--amber-ink);padding:8px 14px;border-radius:999px;font-weight:500;white-space:nowrap}
+.post-btn:hover{background:var(--amber-soft)}
+
+.filters{display:flex;gap:6px;padding:4px 16px 8px;overflow-x:auto;scrollbar-width:none;font-family:var(--mono)}
+.filters::-webkit-scrollbar{display:none}
+.chip{flex:none;font-size:12px;padding:5px 10px;border-radius:4px;border:1px solid var(--line);color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.chip i{width:7px;height:7px;display:inline-block}
+.chip[aria-pressed="true"]{color:var(--text);border-color:var(--chip,var(--soft));background:rgba(255,255,255,.04)}
+.filters select{flex:none;background:transparent;border:1px solid var(--line);border-radius:4px;color:var(--soft);font-size:12px;padding:4px 6px;font-family:var(--mono)}
+.filters select option{background:var(--panel)}
+
+.stage{position:relative;flex:1;min-height:0}
+canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+canvas.dragging{cursor:grabbing}
+.readout{position:absolute;left:16px;top:6px;font-family:var(--mono);font-size:11px;color:var(--green);line-height:1.6;pointer-events:none}
+.readout b{color:var(--text);font-weight:500}
+.demo{position:absolute;right:16px;top:6px;font-family:var(--mono);font-size:11px;color:var(--amber);border:1px dashed rgba(239,159,39,.5);padding:2px 8px;border-radius:4px}
+.hint{position:absolute;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom));text-align:center;font-family:var(--mono);font-size:11px;color:var(--muted);pointer-events:none;transition:opacity .4s}
+
+.card{position:absolute;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));max-width:460px;margin:0 auto;background:var(--panel);border:1px solid var(--line2);border-radius:14px;padding:14px 16px 14px;transform:translateY(16px);opacity:0;pointer-events:none;transition:transform .25s ease,opacity .25s ease}
+.card.open{transform:none;opacity:1;pointer-events:auto}
+.card .meta{font-family:var(--mono);font-size:11px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding-right:28px}
+.card .meta .sq{width:8px;height:8px;display:inline-block}
+.card .close{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:8px;color:var(--muted);font-size:20px;line-height:1}
+.card .close:hover{color:var(--text);background:var(--panel2)}
+.card .body{font-size:16px;line-height:1.5;margin:8px 0 10px;color:var(--text);overflow-wrap:anywhere}
+.tags{display:flex;gap:6px;margin:-2px 0 10px;flex-wrap:wrap}
+.tag{font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:4px;border:1px solid var(--line2);color:var(--soft)}
+.tag.fixed{border-color:var(--green);color:var(--green)}
+.card .row{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.card .stat{font-size:13px;color:var(--soft)}
+.card .stat b{color:var(--text);font-weight:500}
+.metoo{background:var(--amber);color:var(--amber-ink);font-weight:500;font-size:14px;padding:8px 16px;border-radius:999px;white-space:nowrap}
+.metoo:hover{background:var(--amber-soft)}
+.metoo[aria-pressed="true"]{background:transparent;color:var(--amber);border:1px solid rgba(239,159,39,.6)}
+.where{display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:13px;color:var(--soft);gap:8px;align-items:center;flex-wrap:wrap}
+.where.show{display:flex}
+.where select{background:var(--panel2);border:1px solid var(--line2);border-radius:8px;padding:6px 8px;max-width:180px}
+.small-btn{font-size:13px;padding:6px 12px;border-radius:999px;border:1px solid var(--line2);color:var(--text)}
+.small-btn.primary{background:var(--amber);border-color:var(--amber);color:var(--amber-ink);font-weight:500}
+.link-btn{font-size:12px;color:var(--muted);text-decoration:underline;text-underline-offset:3px;padding:4px 0}
+.foot{display:flex;justify-content:space-between;margin-top:8px}
+
+.sheet-bg{position:fixed;inset:0;background:rgba(5,8,12,.72);display:none;align-items:flex-end;justify-content:center;z-index:20}
+.sheet-bg.open{display:flex}
+.sheet{width:100%;max-width:520px;max-height:92dvh;overflow-y:auto;background:var(--panel);border:1px solid var(--line2);border-bottom:0;border-radius:18px 18px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom))}
+@media (min-width:640px){.sheet-bg{align-items:center}.sheet{border-radius:18px;border-bottom:1px solid var(--line2)}}
+.sheet h2{font-family:var(--mono);font-size:16px;font-weight:500;color:var(--amber);display:flex;justify-content:space-between;align-items:center}
+.sheet .sub{font-size:13px;color:var(--soft);margin:4px 0 14px;line-height:1.5}
+.field{margin-bottom:14px}
+.field label,.field .lab{display:block;font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:6px}
+.field textarea,.field input,.field select{width:100%;background:var(--panel2);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;font-size:16px}
+.field textarea{min-height:92px;resize:vertical;line-height:1.45}
+.field textarea:focus,.field input:focus,.field select:focus{border-color:var(--amber);outline:none}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.counter{font-family:var(--mono);font-size:11px;color:var(--muted);text-align:right;margin-top:4px}
+.counter.over{color:var(--red)}
+.cats{display:flex;flex-wrap:wrap;gap:6px}
+.cats .chip{font-size:13px;padding:7px 11px}
+.note{font-size:12px;color:var(--soft);background:rgba(239,159,39,.08);border:1px solid rgba(239,159,39,.25);border-radius:10px;padding:10px 12px;line-height:1.5;margin-bottom:14px}
+.warn{font-size:13px;color:var(--amber-soft);margin-top:6px;min-height:0}
+.err{font-size:13px;color:#F09595;margin-top:6px}
+.submit{width:100%;background:var(--amber);color:var(--amber-ink);font-weight:500;font-size:16px;padding:12px;border-radius:999px}
+.submit:disabled{opacity:.5;cursor:default}
+.done{text-align:center;padding:12px 4px 4px}
+.done p{color:var(--soft);font-size:14px;line-height:1.5;margin:8px 0 16px}
+.x{font-size:22px;color:var(--muted);width:32px;height:32px;border-radius:8px}
+.x:hover{color:var(--text);background:var(--panel2)}
+.list{list-style:none}
+.list li{border-top:1px solid var(--line);padding:12px 2px;display:flex;gap:12px;align-items:flex-start;cursor:pointer}
+.list li:hover{background:rgba(255,255,255,.02)}
+.list .n{font-family:var(--mono);font-size:13px;color:var(--amber);min-width:34px;text-align:right}
+.list .t{font-size:14px;line-height:1.45}
+.list .m{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:2px}
+.about p{font-size:14px;line-height:1.6;color:var(--soft);margin-bottom:10px}
+.about ul{margin:0 0 12px 18px;font-size:14px;line-height:1.6;color:var(--soft)}
+.toast{position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top));transform:translateX(-50%) translateY(-20px);background:var(--panel2);border:1px solid var(--line2);color:var(--text);font-size:13px;padding:8px 14px;border-radius:999px;opacity:0;transition:all .25s;z-index:30;pointer-events:none;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%)}
+@media (max-width:480px){.brand p{display:none}.hbtn.about-btn{display:none}.hbtn .wide{display:none}.hbtn .narrow{display:inline}}
+</style>
+</head>
+<body>
+<h2 class="sr-only">Tripped: a globe of anonymous problems reported by power plant engineers. Use the Top problems list for a text view.</h2>
+<header>
+  <div class="brand">
+    <h1><span class="lamp" aria-hidden="true"></span>Tripped</h1>
+    <p>Power plant problems, lit up by the people who fix them</p>
+  </div>
+  <div class="spacer"></div>
+  <button class="hbtn about-btn" id="aboutBtn">About</button>
+  <button class="hbtn" id="listBtn"><span class="wide">Top problems</span><span class="narrow">Top</span></button>
+  <button class="post-btn" id="postBtn">Post a problem</button>
+</header>
+
+<nav class="filters" id="filters" aria-label="Filter problems"></nav>
+
+<main class="stage" id="stage">
+  <canvas id="globe" aria-label="Globe showing reported problems as lamps"></canvas>
+  <div class="readout" id="readout" aria-live="polite"></div>
+  <div class="demo" id="demoBadge" hidden>Demo mode</div>
+  <div class="hint" id="hint">Drag to spin · tap a lamp to read it</div>
+
+  <section class="card" id="card" aria-live="polite">
+    <button class="close" id="cardClose" aria-label="Close">&times;</button>
+    <div class="meta" id="cMeta"></div>
+    <p class="body" id="cBody"></p>
+    <div class="tags" id="cTags"></div>
+    <div class="row">
+      <span class="stat" id="cStat"></span>
+      <button class="metoo" id="metooBtn" aria-pressed="false">Me too</button>
+    </div>
+    <div class="where" id="where">
+      <span>Where are you?</span>
+      <select id="whereSel" aria-label="Your country"></select>
+      <button class="small-btn primary" id="whereAdd">Add</button>
+      <button class="small-btn" id="whereSkip">Skip</button>
+    </div>
+    <div class="foot">
+      <span class="link-btn" style="text-decoration:none;cursor:default" id="cAge"></span>
+      <button class="link-btn" id="reportBtn">Report</button>
+    </div>
+  </section>
+</main>
+
+<div class="sheet-bg" id="postSheet" role="dialog" aria-modal="true" aria-labelledby="postTitle">
+  <div class="sheet">
+    <div id="postFormWrap">
+      <h2 id="postTitle">Light up a problem <button class="x" data-close aria-label="Close">&times;</button></h2>
+      <p class="sub">One line about something that keeps going wrong at your plant. No account, no name. Others can tap "me too".</p>
+      <form id="postForm" novalidate>
+        <div class="field">
+          <span class="lab">What kind of problem?</span>
+          <div class="cats" id="fCats"></div>
+        </div>
+        <div class="field">
+          <label for="fBody">The problem, in a line or two</label>
+          <textarea id="fBody" maxlength="280" placeholder="Spare pump seal took 9 weeks to arrive. Unit ran derated the whole time."></textarea>
+          <div class="counter" id="fCount">0 / 280</div>
+          <div class="warn" id="fWarn"></div>
+        </div>
+        <div class="two">
+          <div class="field">
+            <label for="fType">Plant type</label>
+            <select id="fType"></select>
+          </div>
+          <div class="field">
+            <label for="fCountry">Country</label>
+            <select id="fCountry"></select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="fRegion">State or region (optional)</label>
+          <input id="fRegion" maxlength="40" placeholder="Maharashtra">
+        </div>
+        <div class="field">
+          <label for="fEmail">Email, if you want to hear when someone fixes this (optional, never shown)</label>
+          <input id="fEmail" type="email" maxlength="200" placeholder="name@example.com" autocomplete="email">
+        </div>
+        <div class="note">Please don't name companies, vendors or people. Posts with names, links or phone numbers wait for a quick review. Your lamp is placed near your country, never on a real plant.</div>
+        <button class="submit" id="fSubmit" type="submit">Light it up</button>
+        <div class="err" id="fErr"></div>
+      </form>
+    </div>
+    <div class="done" id="postDone" hidden>
+      <h2 style="justify-content:center" id="doneTitle">Your lamp is lit</h2>
+      <p id="doneText">It's on the globe now. Share the link with people who'd tap "me too".</p>
+      <button class="submit" data-close id="doneBtn">See it on the globe</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet-bg" id="listSheet" role="dialog" aria-modal="true" aria-labelledby="listTitle">
+  <div class="sheet">
+    <h2 id="listTitle">Top problems <button class="x" data-close aria-label="Close">&times;</button></h2>
+    <p class="sub">Ranked by how many engineers said "me too". Follows the filters you've chosen.</p>
+    <ul class="list" id="topList"></ul>
+  </div>
+</div>
+
+<div class="sheet-bg" id="aboutSheet" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
+  <div class="sheet about">
+    <h2 id="aboutTitle">About Tripped <button class="x" data-close aria-label="Close">&times;</button></h2>
+    <p>Every power plant has problems that never make it into a report: spares that take months, approvals that stall, knowledge that leaves when people retire. Tripped puts them on one map, so we can see which ones are everywhere.</p>
+    <ul>
+      <li>No account, no name, no ads, no tracking cookies. Your IP address isn't saved with anything you post.</li>
+      <li>Lamps sit near your country, scattered on purpose, never on a real plant.</li>
+      <li>Lamps grow brighter as more people tap "me too". New ones pulse for 24 hours.</li>
+      <li>Posts naming companies or people, or with links or phone numbers, are held for review. Three reports take a post down until it's checked.</li>
+      <li>When someone starts fixing a problem, its lamp turns green.</li>
+      <li>Lamps marked "Sample" are examples to get things started.</li>
+    </ul>
+    <p>Built by a power plant engineer as a side project. Feedback is welcome.</p>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script src="config.js"></script>
+<script src="shared.js"></script>
+<script>
+(() => {
+"use strict";
+const T = window.Tripped;
+const $ = id => document.getElementById(id);
+const D = Math.PI / 180;
+
+const store = { get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+                set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+
+/* ---------------- Data ---------------- */
+const hoursAgo = h => new Date(Date.now() - h * 3600e3).toISOString();
+const SAMPLES = [
+  ["Spare pump seal took 9 weeks to arrive. Unit ran derated the whole time.","spares","thermal","India","Maharashtra",19.6,75.4,23,72,["India","India","Indonesia","South Africa"]],
+  ["Three vendor quotes for the same valve, three different specs. Comparing them takes a full day.","procurement","thermal","India","Chhattisgarh",21.4,82.0,17,120,["India","Bangladesh"]],
+  ["Shift handover is a paper register. Half the open issues get lost by the night shift.","om","thermal","India","Jharkhand",23.6,85.3,14,48,["India","Vietnam"]],
+  ["Experienced boiler operators retiring and nobody is trained to replace them.","manpower","thermal","India","Uttar Pradesh",26.9,80.9,11,192,["India","Poland","South Africa"]],
+  ["Emission compliance reports are rebuilt by hand from five spreadsheets every month.","compliance","thermal","India","Tamil Nadu",11.1,78.6,9,144,["India"]],
+  ["Inverter spares sit in a warehouse 800 km away. Every failure means 4 days of downtime.","spares","solar","India","Rajasthan",26.6,73.8,8,20,["India","Australia"]],
+  ["Gearbox oil analysis results come back after the gearbox has already failed.","om","wind","Germany","",52.3,9.9,6,96,["Germany","Denmark"]],
+  ["Purchase approvals need 7 signatures. Urgent orders still wait 3 weeks.","procurement","gas","Indonesia","",-6.4,107.2,12,9,["Indonesia","India","Nigeria"]],
+  ["Turbine OEM parts cost 4x local equivalents but warranty forces us to buy them.","spares","gas","United States","Texas",31.5,-98.4,7,168,["United States","Mexico"]],
+  ["Coal quality varies every rake. Nobody shares the test data with operations in time.","om","thermal","South Africa","",-26.0,28.6,10,72,["South Africa","India"]]
+];
+let posts = [];
+const demoMetoos = {};
+function loadDemo() {
+  posts = SAMPLES.map((s, i) => {
+    const id = "sample-" + i;
+    demoMetoos[id] = s[9].slice();
+    return { id, body: s[0], category: s[1], plant_type: s[2], country: s[3], region: s[4], lat: s[5], lon: s[6],
+             metoo_count: s[7], created_at: hoursAgo(s[8]), is_sample: true, is_fixed: false };
+  });
+  store.get("tripped.demoPosts", []).forEach(p => { posts.push(p); demoMetoos[p.id] = demoMetoos[p.id] || []; });
+}
+async function loadLive() {
+  const rows = await T.req("/rest/v1/posts?select=id,created_at,body,category,plant_type,country,region,lat,lon,is_sample,is_fixed,metoo_count&status=eq.live&order=created_at.desc&limit=1000");
+  const byId = {}; posts.forEach(p => byId[p.id] = p);
+  posts = rows.map(r => Object.assign(byId[r.id] || {}, r));
+}
+async function metooCountries(p) {
+  if (!T.LIVE) return (demoMetoos[p.id] || []).slice();
+  const rows = await T.req("/rest/v1/metoos?select=country&post_id=eq." + encodeURIComponent(p.id) + "&limit=1000");
+  return rows.map(r => r.country).filter(Boolean);
+}
+
+/* ---------------- World outlines (TopoJSON, decoded by hand) ---------------- */
+let world = [];
+fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json")
+  .then(r => r.json()).then(topo => { world = decodeArcs(topo); }).catch(() => {});
+function decodeArcs(topo) {
+  const t = topo.transform; const out = [];
+  for (const arc of topo.arcs) {
+    let x = 0, y = 0; const pts = [];
+    for (const p of arc) {
+      x += p[0]; y += p[1];
+      pts.push(t ? [x * t.scale[0] + t.translate[0], y * t.scale[1] + t.translate[1]] : [p[0], p[1]]);
+    }
+    out.push(pts);
+  }
+  return out;
+}
+
+/* ---------------- Globe ---------------- */
+const canvas = $("globe"), ctx = canvas.getContext("2d");
+let W = 0, H = 0, dpr = 1, R = 200, cx = 0, cy = 0;
+const view = { lon: 72, lat: 16, zoom: 1 };
+let dragging = false, lastInteract = 0, fly = null, selected = null, arcs = [];
+const flashes = {};
+const filters = { cats: new Set(Object.keys(T.CATEGORIES)), type: "all" };
+
+function resize() {
+  const r = canvas.getBoundingClientRect();
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = r.width; H = r.height;
+  canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+  layout();
+}
+function layout() {
+  const cardSpace = selected ? Math.min(210, H * 0.36) : 30;
+  const base = Math.min(W * 0.46, (H - cardSpace) * 0.46);
+  R = Math.max(80, base * view.zoom);
+  cx = W / 2; cy = selected ? (H - cardSpace) / 2 + 8 : H / 2;
+}
+function project(lat, lon) {
+  const l0 = view.lon * D, p0 = view.lat * D, la = lat * D, dl = lon * D - l0;
+  const cosc = Math.sin(p0) * Math.sin(la) + Math.cos(p0) * Math.cos(la) * Math.cos(dl);
+  const x = R * Math.cos(la) * Math.sin(dl);
+  const y = R * (Math.cos(p0) * Math.sin(la) - Math.sin(p0) * Math.cos(la) * Math.cos(dl));
+  return [cx + x, cy - y, cosc];
+}
+function strokePath(points) {
+  let pen = false, prev = null;
+  for (const p of points) {
+    const q = project(p[1], p[0]);
+    if (q[2] > 0) {
+      if (pen && prev && Math.hypot(q[0] - prev[0], q[1] - prev[1]) < R) ctx.lineTo(q[0], q[1]);
+      else ctx.moveTo(q[0], q[1]);
+      pen = true; prev = q;
+    } else pen = false;
+  }
+}
+function visible(p) { return filters.cats.has(p.category) && (filters.type === "all" || p.plant_type === filters.type); }
+function lampSize(p) { return Math.min(11, 3 + Math.sqrt(p.metoo_count || 0) * 1.3); }
+function lampColor(p) { return p.is_fixed ? "#97C459" : (T.CATEGORIES[p.category] || T.CATEGORIES.other).color; }
+function hash(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); }
+
+function draw(t) {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, 2 * Math.PI);
+  ctx.fillStyle = "#0f1720"; ctx.fill();
+  ctx.lineWidth = 1.2; ctx.strokeStyle = "#3B6D11"; ctx.stroke();
+
+  ctx.lineWidth = 0.7; ctx.strokeStyle = "rgba(99,153,34,0.16)"; ctx.beginPath();
+  for (let lat = -60; lat <= 60; lat += 30) { const pts = []; for (let lon = -180; lon <= 180; lon += 4) pts.push([lon, lat]); strokePath(pts); }
+  for (let lon = -180; lon < 180; lon += 30) { const pts = []; for (let lat = -88; lat <= 88; lat += 4) pts.push([lon, lat]); strokePath(pts); }
+  ctx.stroke();
+
+  if (world.length) {
+    ctx.lineWidth = 0.8; ctx.strokeStyle = "rgba(151,196,89,0.42)"; ctx.beginPath();
+    for (const a of world) strokePath(a);
+    ctx.stroke();
+  }
+
+  if (selected && arcs.length) {
+    ctx.lineWidth = 1.4;
+    for (const a of arcs) {
+      ctx.strokeStyle = "rgba(250,199,117,0.55)"; ctx.beginPath(); strokePath(a.pts); ctx.stroke();
+      const q = project(a.from[0], a.from[1]);
+      if (q[2] > 0) { ctx.fillStyle = "#FAC775"; ctx.beginPath(); ctx.arc(q[0], q[1], 2.5, 0, 7); ctx.fill(); }
+    }
+  }
+
+  const now = Date.now(), list = [];
+  for (const p of posts) {
+    if (!visible(p)) continue;
+    const q = project(p.lat, p.lon);
+    if (q[2] <= 0.02) { p._s = null; continue; }
+    p._s = q; list.push(p);
+  }
+  list.sort((a, b) => (a.metoo_count || 0) - (b.metoo_count || 0));
+  for (const p of list) {
+    const [x, y, z] = p._s, r = lampSize(p), col = lampColor(p), a = Math.min(1, z * 1.8);
+    ctx.globalAlpha = a * 0.16; ctx.fillStyle = col;
+    ctx.fillRect(x - r * 2, y - r * 2, r * 4, r * 4);
+    ctx.globalAlpha = a; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.globalAlpha = a * 0.55;
+    ctx.strokeRect(x - r - 4.5, y - r - 4.5, r * 2 + 9, r * 2 + 9);
+    if (now - Date.parse(p.created_at) < 864e5) {
+      const ph = ((t + hash(p.id) % 2600) % 2600) / 2600;
+      ctx.globalAlpha = a * (1 - ph) * 0.8; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(x, y, r + 4 + ph * 22, 0, 7); ctx.stroke();
+    }
+    const f = flashes[p.id];
+    if (f && now < f) {
+      const k = 1 - (f - now) / 900;
+      ctx.globalAlpha = (1 - k) * 0.9; ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(x - r - k * 10, y - r - k * 10, (r + k * 10) * 2, (r + k * 10) * 2);
+    }
+    if (selected === p) {
+      ctx.globalAlpha = 1; ctx.strokeStyle = "#FFFFFF"; ctx.lineWidth = 1.5;
+      ctx.strokeRect(x - r - 8, y - r - 8, r * 2 + 16, r * 2 + 16);
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+let lastT = 0;
+function frame(t) {
+  const dt = Math.min(64, t - (lastT || t)); lastT = t;
+  if (fly) {
+    const k = Math.min(1, (t - fly.t0) / 900), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    view.lon = fly.lon0 + fly.dlon * e; view.lat = fly.lat0 + (fly.lat1 - fly.lat0) * e;
+    view.zoom = fly.z0 + (fly.z1 - fly.z0) * e; layout();
+    if (k >= 1) fly = null;
+  } else if (!dragging && !selected && t - lastInteract > 2500) {
+    view.lon += dt * 0.004;
+  }
+  if (view.lon > 180) view.lon -= 360; if (view.lon < -180) view.lon += 360;
+  draw(t);
+  requestAnimationFrame(frame);
+}
+function flyTo(lat, lon, zoom) {
+  let dlon = lon - view.lon; dlon = ((dlon + 540) % 360) - 180;
+  fly = { t0: performance.now(), lon0: view.lon, lat0: view.lat, dlon, lat1: Math.max(-50, Math.min(50, lat)), z0: view.zoom, z1: zoom || view.zoom };
+}
+
+/* pointer: drag to spin, pinch or wheel to zoom, tap to select */
+const pts = new Map(); let down = null, pinch0 = null;
+canvas.addEventListener("pointerdown", e => {
+  canvas.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pts.size === 1) down = { x: e.clientX, y: e.clientY, lon: view.lon, lat: view.lat, moved: false };
+  if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch0 = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), z: view.zoom }; }
+  fly = null; lastInteract = performance.now();
+});
+canvas.addEventListener("pointermove", e => {
+  if (!pts.has(e.pointerId)) return;
+  pts.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pts.size === 2 && pinch0) {
+    const [a, b] = [...pts.values()];
+    view.zoom = Math.max(0.8, Math.min(3, pinch0.z * Math.hypot(a[0] - b[0], a[1] - b[1]) / pinch0.d));
+    layout(); if (down) down.moved = true; return;
+  }
+  if (!down) return;
+  const dx = e.clientX - down.x, dy = e.clientY - down.y;
+  if (Math.abs(dx) + Math.abs(dy) > 5) { down.moved = true; dragging = true; canvas.classList.add("dragging"); }
+  if (down.moved) {
+    const k = 57 / R;
+    view.lon = down.lon - dx * k;
+    view.lat = Math.max(-70, Math.min(70, down.lat + dy * k));
+  }
+  lastInteract = performance.now();
+});
+function endPointer(e) {
+  pts.delete(e.pointerId);
+  if (pts.size < 2) pinch0 = null;
+  if (pts.size === 0) {
+    if (down && !down.moved && e.type === "pointerup") tapAt(e);
+    down = null; dragging = false; canvas.classList.remove("dragging");
+  }
+  lastInteract = performance.now();
+}
+canvas.addEventListener("pointerup", endPointer);
+canvas.addEventListener("pointercancel", endPointer);
+canvas.addEventListener("wheel", e => {
+  e.preventDefault();
+  view.zoom = Math.max(0.8, Math.min(3, view.zoom * Math.exp(-e.deltaY * 0.0015)));
+  layout(); lastInteract = performance.now();
+}, { passive: false });
+
+function tapAt(e) {
+  const r = canvas.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+  let best = null, bd = Infinity;
+  for (const p of posts) {
+    if (!p._s || !visible(p)) continue;
+    const d = Math.hypot(p._s[0] - x, p._s[1] - y), reach = Math.max(18, lampSize(p) + 10);
+    if (d < reach && d < bd) { bd = d; best = p; }
+  }
+  if (best) select(best); else if (selected) closeCard();
+}
+
+/* ---------------- Card ---------------- */
+const metooed = new Set(store.get("tripped.metooed", []));
+const reported = new Set(store.get("tripped.reported", []));
+let pendingMetoo = null;
+
+function timeAgo(iso) {
+  const s = (Date.now() - Date.parse(iso)) / 1000;
+  if (s < 3600) return Math.max(1, Math.round(s / 60)) + " min ago";
+  if (s < 86400) return Math.round(s / 3600) + " h ago";
+  const d = Math.round(s / 86400); return d + (d === 1 ? " day ago" : " days ago");
+}
+function el(tag, cls, text) { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+
+async function select(p) {
+  selected = p; arcs = [];
+  $("where").classList.remove("show"); pendingMetoo = null;
+  const cat = T.CATEGORIES[p.category] || T.CATEGORIES.other;
+  const meta = $("cMeta"); meta.replaceChildren();
+  const sq = el("span", "sq"); sq.style.background = lampColor(p); meta.append(sq);
+  const where = p.region ? p.region + ", " + p.country : p.country;
+  const m = el("span", null, cat.label + " · " + (T.PLANT_TYPES[p.plant_type] || "Other") + " · " + where);
+  m.style.color = lampColor(p); meta.append(m);
+  $("cBody").textContent = p.body;
+  const tags = $("cTags"); tags.replaceChildren();
+  if (p.is_fixed) tags.append(el("span", "tag fixed", "Someone is fixing this"));
+  if (p.is_sample) tags.append(el("span", "tag", "Sample"));
+  tags.hidden = !tags.children.length;
+  $("cAge").textContent = "Posted " + timeAgo(p.created_at);
+  const mine = metooed.has(p.id);
+  $("metooBtn").setAttribute("aria-pressed", mine ? "true" : "false");
+  $("metooBtn").textContent = mine ? "You flagged this" : "Me too";
+  $("reportBtn").textContent = reported.has(p.id) ? "Reported" : "Report";
+  $("reportBtn").disabled = reported.has(p.id);
+  renderStat(p, null);
+  $("card").classList.add("open");
+  $("hint").style.opacity = 0;
+  layout(); flyTo(p.lat, p.lon, crowded(p) ? Math.max(view.zoom, 1.8) : view.zoom);
+  try {
+    const cs = await metooCountries(p);
+    if (selected !== p) return;
+    p._countries = cs; renderStat(p, cs); buildArcs(p, cs);
+  } catch (e) { /* stats stay without the country breakdown */ }
+}
+function renderStat(p, cs) {
+  const n = p.metoo_count || 0, st = $("cStat"); st.replaceChildren();
+  if (!n) { st.textContent = "Be the first to say you've seen this"; return; }
+  const b = el("b", null, String(n)); st.append(b, document.createTextNode(n === 1 ? " engineer flagged this" : " engineers flagged this"));
+  if (cs) {
+    const k = new Set(cs.concat([p.country])).size;
+    if (k > 1) st.append(document.createTextNode(" in "), el("b", null, String(k)), document.createTextNode(" countries"));
+  }
+}
+function buildArcs(p, cs) {
+  const seen = new Set();
+  arcs = [];
+  for (const c of cs) {
+    if (c === p.country || seen.has(c) || !T.COUNTRY[c]) continue;
+    seen.add(c);
+    const f = T.COUNTRY[c];
+    arcs.push({ from: [f.lat, f.lon], pts: greatCircle(f.lat, f.lon, p.lat, p.lon) });
+  }
+}
+function greatCircle(lat1, lon1, lat2, lon2) {
+  const v = (la, lo) => [Math.cos(la * D) * Math.cos(lo * D), Math.cos(la * D) * Math.sin(lo * D), Math.sin(la * D)];
+  const a = v(lat1, lon1), b = v(lat2, lon2);
+  const dot = Math.max(-1, Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2])), w = Math.acos(dot), out = [];
+  for (let i = 0; i <= 48; i++) {
+    const t = i / 48, s1 = w ? Math.sin((1 - t) * w) / Math.sin(w) : 1 - t, s2 = w ? Math.sin(t * w) / Math.sin(w) : t;
+    const x = s1 * a[0] + s2 * b[0], y = s1 * a[1] + s2 * b[1], z = s1 * a[2] + s2 * b[2];
+    out.push([Math.atan2(y, x) / D, Math.atan2(z, Math.hypot(x, y)) / D]);
+  }
+  return out;
+}
+function crowded(p) {
+  const a = project(p.lat, p.lon);
+  return posts.some(o => {
+    if (o === p || !visible(o)) return false;
+    const q = project(o.lat, o.lon);
+    return q[2] > 0 && Math.hypot(q[0] - a[0], q[1] - a[1]) < 34;
+  });
+}
+function closeCard() {
+  selected = null; arcs = []; $("card").classList.remove("open"); layout();
+  if (view.zoom > 1.2) flyTo(view.lat, view.lon, 1);
+}
+$("cardClose").onclick = closeCard;
+
+$("metooBtn").onclick = async () => {
+  const p = selected; if (!p || metooed.has(p.id)) return;
+  metooed.add(p.id); store.set("tripped.metooed", [...metooed]);
+  p.metoo_count = (p.metoo_count || 0) + 1;
+  flashes[p.id] = Date.now() + 900;
+  $("metooBtn").setAttribute("aria-pressed", "true"); $("metooBtn").textContent = "You flagged this";
+  renderStat(p, p._countries || null); updateReadout();
+  $("whereSel").value = T.guessCountry() || "";
+  $("where").classList.add("show");
+  let resolveId; const idPromise = new Promise(r => resolveId = r);
+  pendingMetoo = { post: p, idPromise };
+  if (T.LIVE) {
+    try {
+      const r = await T.rpc("add_metoo", { p_post: p.id });
+      const row = Array.isArray(r) ? r[0] : r;
+      if (row) { resolveId(row.metoo_id); p.metoo_count = row.total; renderStat(p, p._countries || null); }
+      else resolveId(null);
+    } catch (e) { resolveId(null); toast("Couldn't save that. Check your connection."); }
+  } else resolveId(null);
+};
+$("whereAdd").onclick = async () => {
+  const c = $("whereSel").value, pm = pendingMetoo;
+  $("where").classList.remove("show");
+  if (!c || !pm) return;
+  const p = pm.post;
+  p._countries = (p._countries || []).concat([c]);
+  if (!T.LIVE) demoMetoos[p.id] = (demoMetoos[p.id] || []).concat([c]);
+  if (selected === p) { renderStat(p, p._countries); buildArcs(p, p._countries); }
+  toast(c === p.country ? "Thanks, your country is added." : "Thanks. Your country now shows as a line to this lamp.");
+  if (T.LIVE) { const id = await pm.idPromise; if (id) { try { await T.rpc("set_metoo_country", { p_metoo: id, p_country: c }); } catch (e) {} } }
+  pendingMetoo = null;
+};
+$("whereSkip").onclick = () => { $("where").classList.remove("show"); pendingMetoo = null; };
+
+$("reportBtn").onclick = async () => {
+  const p = selected; if (!p || reported.has(p.id)) return;
+  if (!confirm("Report this post? Use this for names, private details or anything abusive.")) return;
+  reported.add(p.id); store.set("tripped.reported", [...reported]);
+  $("reportBtn").textContent = "Reported"; $("reportBtn").disabled = true;
+  if (T.LIVE) { try { await T.rpc("report_post", { p_post: p.id }); } catch (e) {} }
+  toast("Thanks. It'll be checked.");
+};
+
+/* ---------------- Filters, readout, list ---------------- */
+function buildFilters() {
+  const f = $("filters");
+  const all = el("button", "chip", "All"); all.setAttribute("aria-pressed", "true"); all.dataset.all = "1";
+  f.append(all);
+  for (const [k, c] of Object.entries(T.CATEGORIES)) {
+    const b = el("button", "chip"); b.dataset.cat = k; b.style.setProperty("--chip", c.color);
+    const i = el("i"); i.style.background = c.color; b.append(i, document.createTextNode(c.label));
+    b.setAttribute("aria-pressed", "false"); f.append(b);
+  }
+  const sel = el("select"); sel.setAttribute("aria-label", "Plant type");
+  sel.append(new Option("All plant types", "all"));
+  for (const [k, v] of Object.entries(T.PLANT_TYPES)) sel.append(new Option(v, k));
+  sel.onchange = () => { filters.type = sel.value; afterFilter(); };
+  f.append(sel);
+  f.addEventListener("click", e => {
+    const b = e.target.closest(".chip"); if (!b) return;
+    const chips = [...f.querySelectorAll(".chip[data-cat]")];
+    if (b.dataset.all) { filters.cats = new Set(Object.keys(T.CATEGORIES)); chips.forEach(c => c.setAttribute("aria-pressed", "false")); all.setAttribute("aria-pressed", "true"); }
+    else {
+      const on = b.getAttribute("aria-pressed") === "true";
+      b.setAttribute("aria-pressed", on ? "false" : "true");
+      const picked = chips.filter(c => c.getAttribute("aria-pressed") === "true").map(c => c.dataset.cat);
+      filters.cats = new Set(picked.length ? picked : Object.keys(T.CATEGORIES));
+      all.setAttribute("aria-pressed", picked.length ? "false" : "true");
+    }
+    afterFilter();
+  });
+}
+function afterFilter() { if (selected && !visible(selected)) closeCard(); updateReadout(); }
+function updateReadout() {
+  const v = posts.filter(visible), m = v.reduce((s, p) => s + (p.metoo_count || 0), 0), c = new Set(v.map(p => p.country)).size;
+  const r = $("readout"); r.replaceChildren();
+  r.append(el("b", null, String(v.length)), document.createTextNode(v.length === 1 ? " problem lit" : " problems lit"), el("br"),
+           el("b", null, String(m)), document.createTextNode(" me-toos · "), el("b", null, String(c)), document.createTextNode(c === 1 ? " country" : " countries"));
+}
+function openList() {
+  const ul = $("topList"); ul.replaceChildren();
+  const v = posts.filter(visible).sort((a, b) => (b.metoo_count || 0) - (a.metoo_count || 0)).slice(0, 30);
+  if (!v.length) ul.append(el("li", null, "Nothing here yet. Post the first one."));
+  for (const p of v) {
+    const li = el("li"); li.tabIndex = 0;
+    const n = el("span", "n", String(p.metoo_count || 0));
+    const d = el("div"); d.append(el("div", "t", p.body),
+      el("div", "m", (T.CATEGORIES[p.category] || T.CATEGORIES.other).label + " · " + (T.PLANT_TYPES[p.plant_type] || "") + " · " + p.country + (p.is_sample ? " · Sample" : "")));
+    li.append(n, d);
+    const go = () => { closeSheet($("listSheet")); select(p); };
+    li.onclick = go; li.onkeydown = e => { if (e.key === "Enter") go(); };
+    ul.append(li);
+  }
+  openSheet($("listSheet"));
+}
+
+/* ---------------- Sheets ---------------- */
+let lastFocus = null;
+function openSheet(s) { lastFocus = document.activeElement; s.classList.add("open"); const f = s.querySelector("textarea,input,button"); f && setTimeout(() => f.focus(), 30); }
+function closeSheet(s) { s.classList.remove("open"); lastFocus && lastFocus.focus && lastFocus.focus(); }
+document.querySelectorAll(".sheet-bg").forEach(s => {
+  s.addEventListener("click", e => { if (e.target === s || e.target.closest("[data-close]")) closeSheet(s); });
+});
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  const open = document.querySelector(".sheet-bg.open");
+  if (open) closeSheet(open); else if (selected) closeCard();
+});
+$("listBtn").onclick = openList;
+$("aboutBtn").onclick = () => openSheet($("aboutSheet"));
+
+/* ---------------- Post form ---------------- */
+let fCat = "";
+function buildForm() {
+  const cats = $("fCats");
+  for (const [k, c] of Object.entries(T.CATEGORIES)) {
+    const b = el("button", "chip"); b.type = "button"; b.dataset.cat = k; b.style.setProperty("--chip", c.color);
+    const i = el("i"); i.style.background = c.color; b.append(i, document.createTextNode(c.label));
+    b.setAttribute("aria-pressed", "false");
+    b.onclick = () => { fCat = k; cats.querySelectorAll(".chip").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false")); $("fErr").textContent = ""; };
+    cats.append(b);
+  }
+  const ty = $("fType"); ty.append(new Option("Choose…", ""));
+  for (const [k, v] of Object.entries(T.PLANT_TYPES)) ty.append(new Option(v, k));
+  for (const s of [$("fCountry"), $("whereSel")]) {
+    s.append(new Option("Choose…", ""));
+    T.COUNTRIES.forEach(c => s.append(new Option(c[0], c[0])));
+  }
+  $("fCountry").value = T.guessCountry() || "";
+  const body = $("fBody");
+  body.addEventListener("input", () => {
+    const n = body.value.length; $("fCount").textContent = n + " / 280"; $("fCount").classList.toggle("over", n > 280);
+    const w = T.screen(body.value + " " + $("fRegion").value);
+    $("fWarn").textContent = w ? "This looks like it has " + w + ", so it'll wait for a quick review." : "";
+    $("fErr").textContent = "";
+  });
+  $("fRegion").addEventListener("input", () => body.dispatchEvent(new Event("input")));
+}
+$("postBtn").onclick = () => {
+  $("postFormWrap").hidden = false; $("postDone").hidden = true; $("fErr").textContent = "";
+  openSheet($("postSheet"));
+};
+$("postForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const body = $("fBody").value.trim(), type = $("fType").value, country = $("fCountry").value;
+  const region = $("fRegion").value.trim(), email = $("fEmail").value.trim();
+  const err = msg => { $("fErr").textContent = msg; };
+  if (!fCat) return err("Pick what kind of problem it is.");
+  if (body.length < 5) return err("Write a line about the problem first.");
+  if (body.length > 280) return err("Keep it under 280 characters.");
+  if (!type) return err("Pick the plant type.");
+  if (!country) return err("Pick your country.");
+  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return err("That email doesn't look right. Leave it empty if you prefer.");
+  const last = store.get("tripped.lastPost", 0);
+  if (Date.now() - last < 60000) return err("You just posted. Give it a minute before the next one.");
+  const c = T.COUNTRY[country], s = Math.max(0.15, c.spread);
+  const lat = Math.max(-85, Math.min(85, c.lat + (Math.random() * 2 - 1) * s * 0.8));
+  let lon = c.lon + (Math.random() * 2 - 1) * s * 0.8; lon = ((lon + 540) % 360) - 180;
+  $("fSubmit").disabled = true; $("fSubmit").textContent = "Lighting…";
+  try {
+    let status = "live", p;
+    if (T.LIVE) {
+      const r = await T.rpc("create_post", { p_body: body, p_category: fCat, p_plant_type: type, p_country: country, p_region: region || null, p_lat: lat, p_lon: lon, p_email: email || null });
+      const row = Array.isArray(r) ? r[0] : r; status = row.status;
+      p = { id: row.id, body, category: fCat, plant_type: type, country, region, lat, lon, metoo_count: 0, created_at: new Date().toISOString(), is_sample: false, is_fixed: false };
+    } else {
+      status = T.screen(body + " " + region) ? "held" : "live";
+      p = { id: "demo-" + Date.now(), body, category: fCat, plant_type: type, country, region, lat, lon, metoo_count: 0, created_at: new Date().toISOString(), is_sample: false, is_fixed: false };
+      if (status === "live") { const mine = store.get("tripped.demoPosts", []); mine.push(p); store.set("tripped.demoPosts", mine); demoMetoos[p.id] = []; }
+    }
+    store.set("tripped.lastPost", Date.now());
+    $("postForm").reset(); fCat = ""; $("fCats").querySelectorAll(".chip").forEach(x => x.setAttribute("aria-pressed", "false"));
+    $("fCount").textContent = "0 / 280"; $("fWarn").textContent = ""; $("fCountry").value = country;
+    $("postFormWrap").hidden = true; $("postDone").hidden = false;
+    if (status === "live") {
+      posts.push(p); updateReadout();
+      $("doneTitle").textContent = "Your lamp is lit";
+      $("doneText").textContent = "It's on the globe now and will pulse for 24 hours. Share the link with people who'd tap \"me too\".";
+      $("doneBtn").textContent = "See it on the globe";
+      $("doneBtn").onclick = () => { closeSheet($("postSheet")); select(p); };
+    } else {
+      $("doneTitle").textContent = "Thanks, it's waiting for a quick review";
+      $("doneText").textContent = "It looked like it might name a company or person, or had contact details. Once it's checked, it'll light up.";
+      $("doneBtn").textContent = "Back to the globe";
+      $("doneBtn").onclick = () => closeSheet($("postSheet"));
+    }
+  } catch (ex) {
+    err("Couldn't post right now. Check your connection and try again.");
+  } finally {
+    $("fSubmit").disabled = false; $("fSubmit").textContent = "Light it up";
+  }
+});
+
+/* ---------------- Toast ---------------- */
+let toastT = 0;
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 2600); }
+
+/* ---------------- Start ---------------- */
+buildFilters(); buildForm();
+window.addEventListener("resize", resize);
+resize();
+setTimeout(() => { $("hint").style.opacity = 0; }, 7000);
+async function refresh() {
+  try { await loadLive(); updateReadout(); }
+  catch (e) { if (!posts.length) $("readout").textContent = "Couldn't load problems. Retrying…"; }
+}
+if (T.LIVE) { refresh(); setInterval(() => { if (!document.hidden) refresh(); }, 30000); }
+else { loadDemo(); $("demoBadge").hidden = false; updateReadout(); }
+const deep = new URLSearchParams(location.search).get("p");
+if (deep) { const tryOpen = (n) => { const p = posts.find(x => x.id === deep); if (p) select(p); else if (n) setTimeout(() => tryOpen(n - 1), 600); }; tryOpen(8); }
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

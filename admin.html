@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Tripped admin</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121a23;--line:#2a3542;--text:#E3E1D9;--soft:#B4B2A9;--muted:#888780;--amber:#EF9F27;--ink:#412402;--green:#97C459;--red:#F09595}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;padding:20px 16px 60px;max-width:760px;margin:0 auto}
+button,input{font:inherit;color:inherit}
+h1{font-family:ui-monospace,Menlo,monospace;font-size:20px;font-weight:500;color:var(--amber);margin-bottom:4px}
+.sub{color:var(--muted);font-size:13px;margin-bottom:18px}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+input{width:100%;background:#18222d;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:8px 0 10px}
+.btn{border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer;background:none}
+.btn.primary{background:var(--amber);border-color:var(--amber);color:var(--ink);font-weight:500}
+.btn.danger{border-color:#A32D2D;color:var(--red)}
+.btn.ok{border-color:#3B6D11;color:var(--green)}
+.tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.tabs .btn[aria-pressed="true"]{border-color:var(--amber);color:var(--amber)}
+.item{border-top:1px solid var(--line);padding:12px 0}
+.item:first-child{border-top:0}
+.meta{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--muted);margin-bottom:4px}
+.reason{color:var(--amber)}
+.body{font-size:15px;line-height:1.45;margin-bottom:8px;overflow-wrap:anywhere}
+.acts{display:flex;gap:6px;flex-wrap:wrap}
+.msg{font-size:13px;color:var(--soft)}
+.err{color:var(--red);font-size:13px;margin-top:6px}
+a{color:var(--amber)}
+</style>
+</head>
+<body>
+<h1>Tripped admin</h1>
+<p class="sub">Review held posts, hide anything that slipped through, and mark problems someone is fixing. <a href="./">Back to the globe</a></p>
+
+<div class="box" id="setup" hidden>
+  <p class="msg">The site is in demo mode. Add your Supabase keys to <code>config.js</code> first (README, step 3).</p>
+</div>
+
+<div class="box" id="login" hidden>
+  <p class="msg">Sign in with the admin email you put in the database setup. You'll get a one-time link by email.</p>
+  <input id="email" type="email" placeholder="you@example.com" autocomplete="email">
+  <button class="btn primary" id="sendLink">Email me a sign-in link</button>
+  <p class="err" id="loginErr"></p>
+</div>
+
+<div id="app" hidden>
+  <div class="tabs">
+    <button class="btn" data-tab="held" aria-pressed="true">Held</button>
+    <button class="btn" data-tab="live" aria-pressed="false">Live</button>
+    <button class="btn" data-tab="hidden" aria-pressed="false">Hidden</button>
+    <button class="btn" data-tab="emails" aria-pressed="false">Emails</button>
+    <span style="flex:1"></span>
+    <button class="btn" id="signOut">Sign out</button>
+  </div>
+  <div class="box" id="list"></div>
+</div>
+
+<script src="config.js"></script>
+<script src="shared.js"></script>
+<script>
+(() => {
+const T = window.Tripped, $ = id => document.getElementById(id);
+const el = (t, c, x) => { const n = document.createElement(t); if (c) n.className = c; if (x != null) n.textContent = x; return n; };
+if (!T.LIVE) { $("setup").hidden = false; return; }
+
+const h = new URLSearchParams(location.hash.slice(1));
+if (h.get("access_token")) {
+  try { sessionStorage.setItem("tripped.token", h.get("access_token")); } catch (e) {}
+  history.replaceState(null, "", location.pathname);
+}
+let token = null; try { token = sessionStorage.getItem("tripped.token"); } catch (e) {}
+const api = (path, opts) => T.req(path, opts, token);
+
+if (!token) {
+  $("login").hidden = false;
+  $("sendLink").onclick = async () => {
+    const email = $("email").value.trim(); $("loginErr").textContent = "";
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { $("loginErr").textContent = "Enter your email."; return; }
+    try {
+      const back = location.origin + location.pathname;
+      await T.req("/auth/v1/otp?redirect_to=" + encodeURIComponent(back), { method: "POST", body: JSON.stringify({ email, create_user: true }) });
+      $("login").replaceChildren(el("p", "msg", "Check your inbox for the sign-in link. Open it on this device."));
+    } catch (e) { $("loginErr").textContent = "Couldn't send the link: " + e.message; }
+  };
+  return;
+}
+
+$("app").hidden = false;
+$("signOut").onclick = () => { try { sessionStorage.removeItem("tripped.token"); } catch (e) {} location.reload(); };
+let tab = "held";
+document.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => {
+  tab = b.dataset.tab; document.querySelectorAll("[data-tab]").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false")); load();
+});
+
+async function setPost(id, patch) {
+  await api("/rest/v1/posts?id=eq." + encodeURIComponent(id), { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify(patch) });
+  load();
+}
+async function delPost(id) {
+  if (!confirm("Delete this post for good?")) return;
+  await api("/rest/v1/posts?id=eq." + encodeURIComponent(id), { method: "DELETE" });
+  load();
+}
+
+async function load() {
+  const list = $("list"); list.replaceChildren(el("p", "msg", "Loading…"));
+  try {
+    if (tab === "emails") {
+      const rows = await api("/rest/v1/post_contacts?select=email,created_at,posts(body)&order=created_at.desc&limit=500");
+      list.replaceChildren();
+      if (!rows.length) list.append(el("p", "msg", "No emails yet."));
+      rows.forEach(r => { const d = el("div", "item"); d.append(el("div", "meta", new Date(r.created_at).toLocaleString()), el("div", "body", r.email), el("div", "msg", r.posts ? r.posts.body : "")); list.append(d); });
+      return;
+    }
+    const order = tab === "live" ? "metoo_count.desc" : "created_at.desc";
+    const rows = await api("/rest/v1/posts?select=*&status=eq." + tab + "&order=" + order + "&limit=300");
+    list.replaceChildren();
+    if (!rows.length) { list.append(el("p", "msg", tab === "held" ? "Nothing waiting. All clear." : "Nothing here.")); return; }
+    for (const p of rows) {
+      const d = el("div", "item");
+      const meta = el("div", "meta", [p.category, p.plant_type, p.region ? p.region + ", " + p.country : p.country, p.metoo_count + " me-toos", p.report_count + " reports", new Date(p.created_at).toLocaleDateString()].join(" · ") + (p.is_sample ? " · sample" : "") + (p.is_fixed ? " · fixing" : ""));
+      d.append(meta);
+      if (p.hold_reason && tab !== "live") d.append(el("div", "meta reason", "Held because: " + p.hold_reason));
+      d.append(el("div", "body", p.body));
+      const acts = el("div", "acts");
+      const b = (label, cls, fn) => { const x = el("button", "btn " + cls, label); x.onclick = fn; acts.append(x); };
+      if (tab !== "live") b("Publish", "ok", () => setPost(p.id, { status: "live", hold_reason: null, report_count: 0 }));
+      if (tab === "live") {
+        b(p.is_fixed ? "Unmark fixing" : "Mark as being fixed", "ok", () => setPost(p.id, { is_fixed: !p.is_fixed }));
+        b("Hide", "", () => setPost(p.id, { status: "hidden" }));
+      }
+      if (tab === "held") b("Hide", "", () => setPost(p.id, { status: "hidden" }));
+      b("Delete", "danger", () => delPost(p.id));
+      d.append(acts); list.append(d);
+    }
+  } catch (e) {
+    list.replaceChildren(el("p", "err", "Couldn't load: " + e.message + ". Your sign-in may have expired, or this email isn't the admin email."));
+    const again = el("button", "btn", "Sign in again"); again.style.marginTop = "10px";
+    again.onclick = () => { try { sessionStorage.removeItem("tripped.token"); } catch (x) {} location.reload(); };
+    list.append(again);
+  }
+}
+load();
+})();
+</script>
+</body>
+</html>
