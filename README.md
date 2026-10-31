@@ -15,7 +15,8 @@ An anonymous globe where power plant engineers light up the problems they keep r
 | `index.html` | The globe, the post form and the "Top problems" list |
 | `admin.html` | Your private review page (held posts, hide, mark as being fixed, emails) |
 | `shared.js` | Country list, categories and the database connection |
-| `config.js` | Where your two Supabase keys go. Empty = demo mode |
+| `config.js` | Fallback settings, left empty (demo mode) |
+| `api/config.mjs` | Hands the Supabase settings from Vercel's Environment Variables to the page |
 | `supabase/schema.sql` | The database setup, run once in Supabase |
 
 ## How it's hosted
@@ -40,9 +41,16 @@ Until Supabase is connected, the site runs in **demo mode**: sample posts, and a
 
 ## Step 3: Connect the site to the database (2 minutes)
 
-1. In Supabase, click **Connect** at the top of your project (or open **Settings > API Keys**). Copy the **Project URL** and the **publishable** key (on older projects it's called the **anon / public** key). Never use the secret or service_role key here.
-2. Paste the two values between the quotes in `config.js` and push (or send them to Claude to push).
-3. Vercel redeploys in about a minute. Reload your site. The "Demo mode" badge disappears, and posts and "me too" taps are now shared with everyone.
+1. In Supabase, go to **Project Settings → API Keys** and copy the **publishable** key (`sb_publishable_…`). Never use the secret key here.
+2. Copy the **Project URL** (`https://xxxx.supabase.co`). It's in the **Connect** dialog, or build it from the **Project ID** under **Project Settings → General**.
+3. In Vercel, open the project, go to **Settings → Environment Variables** and add:
+
+| Key | Value |
+|---|---|
+| `SUPABASE_URL` | the Project URL |
+| `SUPABASE_PUBLISHABLE_KEY` | the publishable key |
+
+4. Go to **Deployments → ⋯ → Redeploy**. Reload your site: the "Demo mode" badge disappears, and posts and "me too" taps are now shared with everyone.
 
 The publishable key is designed to be public. The database rules in `schema.sql` decide what it can do: read live posts, create posts, add "me too" and report. It can't read emails, held posts or edit anything.
 
