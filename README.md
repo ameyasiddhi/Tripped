@@ -62,6 +62,15 @@ The publishable key is designed to be public. The database rules in `schema.sql`
 
 From the admin page you can publish or hide held posts, hide live ones, mark a problem as being fixed (its lamp turns green) and see the optional emails people left.
 
+## Visitor stats (private)
+
+The site sends anonymous page views to Vercel Web Analytics (no cookies). To see them:
+
+1. In Vercel, open **Analytics** in the sidebar, choose the `tripped` project and click **Enable** (once).
+2. Visit the site once. Stats appear in the Analytics tab: visitors, countries, devices and where people came from.
+
+The admin page is left out on purpose, so your own reviewing doesn't inflate the numbers. Free on the Hobby plan up to 50,000 page views a month.
+
 ## Before you share it
 
 - The 10 sample posts are tagged "Sample" on the globe. Once you have about 20 real posts, delete them from the admin page, or run `delete from posts where is_sample;` in the SQL Editor.
