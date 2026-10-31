@@ -47,7 +47,32 @@ header{display:flex;align-items:center;gap:12px;padding:12px 16px calc(8px) 16px
 .filters select{flex:none;background:transparent;border:1px solid var(--line);border-radius:4px;color:var(--soft);font-size:12px;padding:4px 6px;font-family:var(--mono)}
 .filters select option{background:var(--panel)}
 
-.stage{position:relative;flex:1;min-height:0}
+.wrap{flex:1;min-height:0;display:flex}
+.stage{position:relative;flex:1;min-height:0;min-width:0}
+.side{width:340px;flex:none;border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.side-head{padding:12px 16px 8px}
+.side-head h2,.sheet .side-h{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--amber)}
+.side-head p{font-size:12px;color:var(--muted);line-height:1.5;margin-top:4px}
+.side-list{flex:1;overflow-y:auto;padding:0 12px 16px;list-style:none}
+.common{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px;background:var(--panel)}
+.common .t{font-size:14px;line-height:1.45;color:var(--text)}
+.common .m{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.common .m i{width:7px;height:7px;display:inline-block}
+.common .row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px}
+.common .lit{font-size:12px;color:var(--green)}
+.common button{font-size:13px;padding:6px 12px;border-radius:999px;border:1px solid var(--line2);color:var(--text);white-space:nowrap;margin-left:auto}
+.common button:hover{border-color:var(--amber);color:var(--amber)}
+.common button.mt{background:var(--amber);border-color:var(--amber);color:var(--amber-ink);font-weight:500}
+.common button.done{border-color:rgba(239,159,39,.5);color:var(--amber);background:transparent;cursor:default}
+.side-empty{font-size:13px;color:var(--muted);padding:12px 4px}
+.common-bar{display:none;position:absolute;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));max-width:460px;margin:0 auto;background:var(--panel);border:1px solid var(--line2);border-radius:999px;padding:10px 16px;font-size:14px;color:var(--text);text-align:left;align-items:center;gap:8px;z-index:3}
+.common-bar span{flex:1}
+.common-bar b{color:var(--amber);font-weight:500}
+.empty{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;font-family:var(--mono);font-size:13px;color:var(--soft);background:rgba(11,15,20,.78);border:1px dashed var(--line2);border-radius:10px;padding:12px 16px;max-width:260px;line-height:1.6;pointer-events:none}
+.empty b{color:var(--amber);font-weight:500}
+.prefill{font-size:12px;color:var(--green);margin:-6px 0 12px}
+.card{z-index:5}
+@media (max-width:899px){.side{display:none}.common-bar{display:flex}.hint{bottom:calc(66px + env(safe-area-inset-bottom))}}
 canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
 canvas.dragging{cursor:grabbing}
 .readout{position:absolute;left:16px;top:6px;font-family:var(--mono);font-size:11px;color:var(--green);line-height:1.6;pointer-events:none}
@@ -132,11 +157,14 @@ canvas.dragging{cursor:grabbing}
 
 <nav class="filters" id="filters" aria-label="Filter problems"></nav>
 
+<div class="wrap">
 <main class="stage" id="stage">
   <canvas id="globe" aria-label="Globe showing reported problems as lamps"></canvas>
   <div class="readout" id="readout" aria-live="polite"></div>
   <div class="demo" id="demoBadge" hidden>Demo mode</div>
   <div class="hint" id="hint">Drag to spin · tap a lamp to read it</div>
+  <div class="empty" id="empty" hidden>No problems lit yet.<br>Pick a <b>common problem</b> or post your own.</div>
+  <button class="common-bar" id="commonBar"><span>Is one of these your problem? <b id="commonN"></b></span><span aria-hidden="true" style="flex:none">&rsaquo;</span></button>
 
   <section class="card" id="card" aria-live="polite">
     <button class="close" id="cardClose" aria-label="Close">&times;</button>
@@ -159,6 +187,14 @@ canvas.dragging{cursor:grabbing}
     </div>
   </section>
 </main>
+<aside class="side" aria-labelledby="sideTitle">
+  <div class="side-head">
+    <h2 id="sideTitle">Common problems</h2>
+    <p>Seen at plants around the world. If one happens at yours, light it up for your country.</p>
+  </div>
+  <ul class="side-list" id="sideList"></ul>
+</aside>
+</div>
 
 <div class="sheet-bg" id="postSheet" role="dialog" aria-modal="true" aria-labelledby="postTitle">
   <div class="sheet">
@@ -170,6 +206,7 @@ canvas.dragging{cursor:grabbing}
           <span class="lab">What kind of problem?</span>
           <div class="cats" id="fCats"></div>
         </div>
+        <p class="prefill" id="fPrefill" hidden>Filled in from a common problem. Edit it to match your plant if you like.</p>
         <div class="field">
           <label for="fBody">The problem, in a line or two</label>
           <textarea id="fBody" maxlength="280" placeholder="Spare pump seal took 9 weeks to arrive. Unit ran derated the whole time."></textarea>
@@ -207,6 +244,14 @@ canvas.dragging{cursor:grabbing}
   </div>
 </div>
 
+<div class="sheet-bg" id="commonSheet" role="dialog" aria-modal="true" aria-labelledby="commonTitle">
+  <div class="sheet">
+    <h2 id="commonTitle">Common problems <button class="x" data-close aria-label="Close">&times;</button></h2>
+    <p class="sub">Seen at plants around the world. If one happens at yours, light it up for your country.</p>
+    <ul class="side-list" id="sheetList" style="padding:0"></ul>
+  </div>
+</div>
+
 <div class="sheet-bg" id="listSheet" role="dialog" aria-modal="true" aria-labelledby="listTitle">
   <div class="sheet">
     <h2 id="listTitle">Top problems <button class="x" data-close aria-label="Close">&times;</button></h2>
@@ -225,7 +270,7 @@ canvas.dragging{cursor:grabbing}
       <li>Lamps grow brighter as more people tap "me too". New ones pulse for 24 hours.</li>
       <li>Posts naming companies or people, or with links or phone numbers, are held for review. Three reports take a post down until it's checked.</li>
       <li>When someone starts fixing a problem, its lamp turns green.</li>
-      <li>Lamps marked "Sample" are examples to get things started.</li>
+      <li>Every lamp on the globe was posted by a real person. The "Common problems" list holds examples you can light up for your own plant.</li>
     </ul>
     <p>Built by a power plant engineer as a side project. Feedback is welcome.</p>
   </div>
@@ -260,21 +305,26 @@ const SAMPLES = [
   ["Turbine OEM parts cost 4x local equivalents but warranty forces us to buy them.","spares","gas","United States","Texas",31.5,-98.4,7,168,["United States","Mexico"]],
   ["Coal quality varies every rake. Nobody shares the test data with operations in time.","om","thermal","South Africa","",-26.0,28.6,10,72,["South Africa","India"]]
 ];
-let posts = [];
+let posts = [];      // real posts: the only ones on the globe and in the counts
+let commons = [];    // sample posts, shown in the Common problems list
 const demoMetoos = {};
+const norm = t => (t || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 function loadDemo() {
-  posts = SAMPLES.map((s, i) => {
+  commons = SAMPLES.map((s, i) => {
     const id = "sample-" + i;
     demoMetoos[id] = s[9].slice();
     return { id, body: s[0], category: s[1], plant_type: s[2], country: s[3], region: s[4], lat: s[5], lon: s[6],
              metoo_count: s[7], created_at: hoursAgo(s[8]), is_sample: true, is_fixed: false };
   });
+  posts = [];
   store.get("tripped.demoPosts", []).forEach(p => { posts.push(p); demoMetoos[p.id] = demoMetoos[p.id] || []; });
 }
 async function loadLive() {
   const rows = await T.req("/rest/v1/posts?select=id,created_at,body,category,plant_type,country,region,lat,lon,is_sample,is_fixed,metoo_count&status=eq.live&order=created_at.desc&limit=1000");
   const byId = {}; posts.forEach(p => byId[p.id] = p);
-  posts = rows.map(r => Object.assign(byId[r.id] || {}, r));
+  const all = rows.map(r => Object.assign(byId[r.id] || {}, r));
+  posts = all.filter(r => !r.is_sample);
+  commons = all.filter(r => r.is_sample);
 }
 async function metooCountries(p) {
   if (!T.LIVE) return (demoMetoos[p.id] || []).slice();
@@ -480,6 +530,7 @@ function tapAt(e) {
 
 /* ---------------- Card ---------------- */
 const metooed = new Set(store.get("tripped.metooed", []));
+const mine = new Set(store.get("tripped.mine", []));
 const reported = new Set(store.get("tripped.reported", []));
 let pendingMetoo = null;
 
@@ -506,13 +557,13 @@ async function select(p) {
   if (p.is_sample) tags.append(el("span", "tag", "Sample"));
   tags.hidden = !tags.children.length;
   $("cAge").textContent = "Posted " + timeAgo(p.created_at);
-  const mine = metooed.has(p.id);
-  $("metooBtn").setAttribute("aria-pressed", mine ? "true" : "false");
-  $("metooBtn").textContent = mine ? "You flagged this" : "Me too";
+  const done = metooed.has(p.id) || mine.has(p.id);
+  $("metooBtn").setAttribute("aria-pressed", done ? "true" : "false");
+  $("metooBtn").textContent = mine.has(p.id) ? "You posted this" : done ? "You flagged this" : "Me too";
   $("reportBtn").textContent = reported.has(p.id) ? "Reported" : "Report";
   $("reportBtn").disabled = reported.has(p.id);
   renderStat(p, null);
-  $("card").classList.add("open");
+  $("card").classList.add("open"); $("empty").hidden = true;
   $("hint").style.opacity = 0;
   layout(); flyTo(p.lat, p.lon, crowded(p) ? Math.max(view.zoom, 1.8) : view.zoom);
   try {
@@ -561,12 +612,13 @@ function crowded(p) {
 }
 function closeCard() {
   selected = null; arcs = []; $("card").classList.remove("open"); layout();
+  $("empty").hidden = posts.length > 0;
   if (view.zoom > 1.2) flyTo(view.lat, view.lon, 1);
 }
 $("cardClose").onclick = closeCard;
 
 $("metooBtn").onclick = async () => {
-  const p = selected; if (!p || metooed.has(p.id)) return;
+  const p = selected; if (!p || metooed.has(p.id) || mine.has(p.id)) return;
   metooed.add(p.id); store.set("tripped.metooed", [...metooed]);
   p.metoo_count = (p.metoo_count || 0) + 1;
   flashes[p.id] = Date.now() + 900;
@@ -638,16 +690,48 @@ function buildFilters() {
   });
 }
 function afterFilter() { if (selected && !visible(selected)) closeCard(); updateReadout(); }
+function realMatch(c) { const k = norm(c.body); return posts.find(p => norm(p.body) === k); }
+function renderCommons() {
+  const order = Object.keys(T.CATEGORIES);
+  const list = commons.filter(visible).sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category));
+  $("commonN").textContent = commons.length ? commons.length + " common" : "";
+  for (const ul of [$("sideList"), $("sheetList")]) {
+    ul.replaceChildren();
+    if (!list.length) { ul.append(el("li", "side-empty", "No common problems for these filters.")); continue; }
+    for (const c of list) {
+      const li = el("li", "common"), cat = T.CATEGORIES[c.category] || T.CATEGORIES.other;
+      const m = el("div", "m"), i = el("i"); i.style.background = cat.color;
+      m.append(i, document.createTextNode(cat.label + " · " + (T.PLANT_TYPES[c.plant_type] || "Other")));
+      const row = el("div", "row"), match = realMatch(c);
+      if (match) {
+        const n = match.metoo_count || 0;
+        row.append(el("span", "lit", "Lit · " + n + (n === 1 ? " me too" : " me-toos")));
+        const own = mine.has(match.id), flagged = metooed.has(match.id);
+        const b = el("button", own || flagged ? "done" : "mt", own ? "You lit this" : flagged ? "You flagged this" : "Me too");
+        b.onclick = () => { closeSheet($("commonSheet")); select(match); };
+        row.append(b);
+      } else {
+        const b = el("button", null, "This happens at my plant");
+        b.onclick = () => { closeSheet($("commonSheet")); openPost(c); };
+        row.append(b);
+      }
+      li.append(el("div", "t", c.body), m, row);
+      ul.append(li);
+    }
+  }
+}
 function updateReadout() {
+  renderCommons();
+  $("empty").hidden = posts.length > 0 || !!selected;
   const v = posts.filter(visible), m = v.reduce((s, p) => s + (p.metoo_count || 0), 0), c = new Set(v.map(p => p.country)).size;
   const r = $("readout"); r.replaceChildren();
   r.append(el("b", null, String(v.length)), document.createTextNode(v.length === 1 ? " problem lit" : " problems lit"), el("br"),
-           el("b", null, String(m)), document.createTextNode(" me-toos · "), el("b", null, String(c)), document.createTextNode(c === 1 ? " country" : " countries"));
+           el("b", null, String(m)), document.createTextNode(m === 1 ? " me too · " : " me-toos · "), el("b", null, String(c)), document.createTextNode(c === 1 ? " country" : " countries"));
 }
 function openList() {
   const ul = $("topList"); ul.replaceChildren();
   const v = posts.filter(visible).sort((a, b) => (b.metoo_count || 0) - (a.metoo_count || 0)).slice(0, 30);
-  if (!v.length) ul.append(el("li", null, "Nothing here yet. Post the first one."));
+  if (!v.length) ul.append(el("li", null, "Nothing lit yet. Pick a common problem or post your own."));
   for (const p of v) {
     const li = el("li"); li.tabIndex = 0;
     const n = el("span", "n", String(p.metoo_count || 0));
@@ -674,6 +758,7 @@ document.addEventListener("keydown", e => {
   if (open) closeSheet(open); else if (selected) closeCard();
 });
 $("listBtn").onclick = openList;
+$("commonBar").onclick = () => openSheet($("commonSheet"));
 $("aboutBtn").onclick = () => openSheet($("aboutSheet"));
 
 /* ---------------- Post form ---------------- */
@@ -703,10 +788,36 @@ function buildForm() {
   });
   $("fRegion").addEventListener("input", () => body.dispatchEvent(new Event("input")));
 }
-$("postBtn").onclick = () => {
+function setCat(k) {
+  fCat = k || "";
+  $("fCats").querySelectorAll(".chip").forEach(x => x.setAttribute("aria-pressed", x.dataset.cat === fCat ? "true" : "false"));
+}
+function openPost(c) {
   $("postFormWrap").hidden = false; $("postDone").hidden = true; $("fErr").textContent = "";
+  $("fPrefill").hidden = !c;
+  if (c) {
+    setCat(c.category); $("fBody").value = c.body; $("fType").value = c.plant_type;
+    $("fBody").dispatchEvent(new Event("input"));
+  }
   openSheet($("postSheet"));
-};
+  if (c) setTimeout(() => (!$("fCountry").value ? $("fCountry") : $("fSubmit")).focus(), 40);
+}
+$("postBtn").onclick = () => openPost(null);
+async function metooFromForm(p, country) {
+  closeSheet($("postSheet"));
+  if (metooed.has(p.id) || mine.has(p.id)) { select(p); toast(mine.has(p.id) ? "You already lit this one." : "You've already flagged this one."); return; }
+  metooed.add(p.id); store.set("tripped.metooed", [...metooed]);
+  p.metoo_count = (p.metoo_count || 0) + 1; flashes[p.id] = Date.now() + 900;
+  p._countries = (p._countries || []).concat([country]);
+  if (!T.LIVE) demoMetoos[p.id] = (demoMetoos[p.id] || []).concat([country]);
+  updateReadout(); select(p);
+  setTimeout(() => $("where").classList.remove("show"), 0);
+  toast("Someone already lit this one, so your me too was added to it.");
+  if (T.LIVE) {
+    try { const r = await T.rpc("add_metoo", { p_post: p.id, p_country: country }); const row = Array.isArray(r) ? r[0] : r; if (row) { p.metoo_count = row.total; updateReadout(); if (selected === p) renderStat(p, p._countries); } }
+    catch (e) { toast("Couldn't save that. Check your connection."); }
+  }
+}
 $("postForm").addEventListener("submit", async e => {
   e.preventDefault();
   const body = $("fBody").value.trim(), type = $("fType").value, country = $("fCountry").value;
@@ -718,6 +829,8 @@ $("postForm").addEventListener("submit", async e => {
   if (!type) return err("Pick the plant type.");
   if (!country) return err("Pick your country.");
   if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return err("That email doesn't look right. Leave it empty if you prefer.");
+  const existing = posts.find(x => norm(x.body) === norm(body));
+  if (existing) return metooFromForm(existing, country);
   const last = store.get("tripped.lastPost", 0);
   if (Date.now() - last < 60000) return err("You just posted. Give it a minute before the next one.");
   const c = T.COUNTRY[country], s = Math.max(0.15, c.spread);
@@ -736,10 +849,11 @@ $("postForm").addEventListener("submit", async e => {
       if (status === "live") { const mine = store.get("tripped.demoPosts", []); mine.push(p); store.set("tripped.demoPosts", mine); demoMetoos[p.id] = []; }
     }
     store.set("tripped.lastPost", Date.now());
-    $("postForm").reset(); fCat = ""; $("fCats").querySelectorAll(".chip").forEach(x => x.setAttribute("aria-pressed", "false"));
+    $("postForm").reset(); setCat(""); $("fPrefill").hidden = true;
     $("fCount").textContent = "0 / 280"; $("fWarn").textContent = ""; $("fCountry").value = country;
     $("postFormWrap").hidden = true; $("postDone").hidden = false;
     if (status === "live") {
+      mine.add(p.id); store.set("tripped.mine", [...mine]);
       posts.push(p); updateReadout();
       $("doneTitle").textContent = "Your lamp is lit";
       $("doneText").textContent = "It's on the globe now and will pulse for 24 hours. Share the link with people who'd tap \"me too\".";
