@@ -41,6 +41,14 @@ create table if not exists public.post_contacts (
 create index if not exists posts_status_idx on public.posts(status);
 create index if not exists metoos_post_idx on public.metoos(post_id);
 
+-- ---------- Table access ----------
+-- Supabase no longer exposes new tables to the website automatically (change rolled out 2026),
+-- so give each role exactly the table access it needs. Row level security still applies on top.
+grant select on public.posts, public.metoos to anon, authenticated;
+grant update, delete on public.posts to authenticated;
+grant select on public.post_contacts to authenticated;
+grant all on public.posts, public.metoos, public.post_contacts to service_role;
+
 -- ---------- Admin check ----------
 
 create or replace function public.is_admin() returns boolean
